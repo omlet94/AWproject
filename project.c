@@ -1,26 +1,62 @@
-#include <omp.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
+#include <malloc.h>
 
-int main (int argc, char *argv[]) 
+unsigned char *read_bmp(char *fname,int* _w, int* _h)
 {
-int nthreads, tid;
+    unsigned char head[54];
+    FILE *f = fopen(fname,"rb");
 
-/* Fork a team of threads giving them their own copies of variables */
-#pragma omp parallel private(nthreads, tid)
-  {
+    // BMP header is 54 bytes
+    fread(head, 1, 54, f);
 
-  /* Obtain thread number */
-  tid = omp_get_thread_num();
-  printf("Hello World from thread = %d\n", tid);
+    //int w = head[18] + ( ((int)head[19]) << 8) + ( ((int)head[20]) << 16) + ( ((int)head[21]) << 24);
+	int w = *(int*)&head[18];
+    //int h = head[22] + ( ((int)head[23]) << 8) + ( ((int)head[24]) << 16) + ( ((int)head[25]) << 24);
+	int h = *(int*)&head[22];
+    // lines are aligned on 4-byte boundary
+    int lineSize = (w / 8 + (w / 8) % 4);
+    int fileSize = lineSize * h;
 
-  /* Only master thread does this */
-  if (tid == 0) 
-    {
-    nthreads = omp_get_num_threads();
-    printf("Number of threads = %d\n", nthreads);
+    unsigned char *img = malloc(w * h);
+	unsigned char *data = malloc(fileSize);
+
+    // skip the header
+    fseek(f,54,SEEK_SET);
+
+    // skip palette - two rgb quads, 8 bytes
+    fseek(f, 8, SEEK_CUR);
+
+    // read data
+    fread(data,1,fileSize,f);
+
+    // decode bits
+    int i, j, k, rev_j;
+    for(j = 0, rev_j = h - 1; j < h ; j++, rev_j--) {
+        for(i = 0 ; i < w / 8; i++) {
+            int fpos = j * lineSize + i, pos = rev_j * w + i * 8;
+            for(k = 0 ; k < 8 ; k++)
+                img[pos + (7 - k)] = (data[fpos] >> k ) & 1;
+        }
     }
 
-  }  /* All threads join master thread and disband */
+    free(data);
+    *_w = w; *_h = h;
+    return img;
+}
 
+int main()
+{
+    int w, h, i, j;
+    unsigned char* img = read_bmp("test1.bmp", &w, &h);
+
+    for(j = 0 ; j < h ; j++)
+    {
+        for(i = 0 ; i < w ; i++)
+            printf("%c ", img[j * w + i] ? '0' : '1' );
+
+        printf("\n");
+    }
+
+    return 0;
 }

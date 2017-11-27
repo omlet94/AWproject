@@ -1,0 +1,2 @@
+# AWproject
+projekt Architektury Wielordzeniowe

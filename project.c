@@ -35,9 +35,9 @@ unsigned char *read_bmp(char *inputfilename, unsigned char header[], int* _width
 		for (int j = 0; j < width * 3; j += 3)
 		{
 			int index = (i * width * 3) + (j);
-			img[index + 0] = data[j + 0];//r -> B
-			img[index + 1] = data[j + 1];//g -> G
-			img[index + 2] = data[j + 2];//b -> R
+			img[index + 0] = data[j + 0];//B
+			img[index + 1] = data[j + 1];//G
+			img[index + 2] = data[j + 2];//R
 		}
 	}
 	*_width = width;
@@ -74,6 +74,7 @@ unsigned char *dilation(unsigned char input_img[], int* width, int* height , int
 	int struct_margin = (*struct_size - 1) / 2;
 	int index = 0;
 	int centerpoint = 0;
+	int skip = 0;
 	for (int i = 0; i < *height; i++)
 	{
 		for (int j = 0; j < (*width) * 3; j += 3)
@@ -84,25 +85,27 @@ unsigned char *dilation(unsigned char input_img[], int* width, int* height , int
 					for (int l = -struct_margin; l <= struct_margin; l++) {							
 						index = centerpoint + k * ((*width) * 3) + l * 3;
 						if ((input_img[index] == 0) && (input_img[index + 1] == 0) && (input_img[index + 2] == 0)) {
-							output_img[centerpoint + 0] = 0;
-							output_img[centerpoint + 1] = 0;
-							output_img[centerpoint + 2] = 0;
-							goto end;
+							output_img[centerpoint + 0] = 0;//B
+							output_img[centerpoint + 1] = 0;//G
+							output_img[centerpoint + 2] = 0;//R
+							skip = 1;
 						}
 						else {
-							output_img[centerpoint + 0] = 255;
-							output_img[centerpoint + 1] = 255;
-							output_img[centerpoint + 2] = 255;
+							output_img[centerpoint + 0] = 255;//B
+							output_img[centerpoint + 1] = 255;//G
+							output_img[centerpoint + 2] = 255;//R
 						}
+						if (skip != 0) break;
 					}
+					if (skip != 0) break;
 				}
-			end:;
+				skip = 0;
 			}
 			else 
 			{
-				output_img[centerpoint + 0] = input_img[centerpoint + 0];
-				output_img[centerpoint + 1] = input_img[centerpoint + 1];
-				output_img[centerpoint + 2] = input_img[centerpoint + 2];
+				output_img[centerpoint + 0] = input_img[centerpoint + 0];//B
+				output_img[centerpoint + 1] = input_img[centerpoint + 1];//G
+				output_img[centerpoint + 2] = input_img[centerpoint + 2];//R
 			}
 		}
 	}
@@ -120,6 +123,7 @@ unsigned char *erosion(unsigned char input_img[], int* width, int* height, int* 
 	int struct_margin = (*struct_size - 1) / 2;
 	int index = 0;
 	int centerpoint = 0;
+	int skip = 0;
 	for (int i = 0; i < *height; i++)
 	{
 		for (int j = 0; j < (*width) * 3; j += 3)
@@ -130,19 +134,21 @@ unsigned char *erosion(unsigned char input_img[], int* width, int* height, int* 
 					for (int l = -struct_margin; l <= struct_margin; l++) {
 						index = centerpoint + k * ((*width) * 3) + l * 3;
 						if ((input_img[index] == 255) && (input_img[index + 1] == 255) && (input_img[index + 2] == 255)) {
-							output_img[centerpoint + 0] = 255;
-							output_img[centerpoint + 1] = 255;
-							output_img[centerpoint + 2] = 255;
-							goto end;
+							output_img[centerpoint + 0] = 255;//B
+							output_img[centerpoint + 1] = 255;//G
+							output_img[centerpoint + 2] = 255;//R
+							skip = 1;
 						}
 						else {
-							output_img[centerpoint + 0] = input_img[centerpoint + 0];
-							output_img[centerpoint + 1] = input_img[centerpoint + 1];
-							output_img[centerpoint + 2] = input_img[centerpoint + 2];
+							output_img[centerpoint + 0] = input_img[centerpoint + 0];//B
+							output_img[centerpoint + 1] = input_img[centerpoint + 1];//G
+							output_img[centerpoint + 2] = input_img[centerpoint + 2];//R
 						}
+						if (skip != 0) break;
 					}
+					if (skip != 0) break;
 				}
-			end:;
+				skip = 0;
 			}
 			else
 			{
@@ -168,20 +174,30 @@ unsigned char *morph_open(unsigned char input_img[], int* width, int* height, in
 int main(int argc, char** argv)
 {
 	int width, height, i, j,struct_size;
-	struct_size = 21;
 	char* inputfilename = "test1.bmp";
 	char* outputfilename = "test1_output.bmp";
 	unsigned char header[54];
 	unsigned char* input_img;
 	unsigned char* output_img;
+
+	if (argc >= 2) {
+		struct_size = strtol(argv[1], NULL, 10);
+	}
+	else if (argc == 1) {
+		struct_size = 3;
+	}
+
 	input_img = (unsigned char *)malloc(width * height * 3 * sizeof(unsigned char));
 	output_img = (unsigned char *)malloc(width * height * 3 * sizeof(unsigned char));
+
 	input_img = read_bmp(inputfilename, header, &width, &height);
 	show_info(inputfilename, &width, &height, &struct_size);
 	output_img = morph_open(input_img, &width, &height,&struct_size);
 	write_bmp(outputfilename, header, output_img, &width, &height);
 	printf("Created Output File: %s\n", outputfilename);
+
 	free(input_img);
 	free(output_img);
+
 	return 0;
 }

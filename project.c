@@ -43,9 +43,9 @@ unsigned char *read_bmp(char *inputfilename, unsigned char header[], int* _width
 
 	free(data);
 	fclose(fd);
-    *_width = width;
+	*_width = width;
 	*_height = height;
-    return img;
+	return img;
 }
 void write_bmp(char *outputfilename, unsigned char header[], unsigned char outputimg[], int* width, int* height) {
 	FILE *fo;
@@ -54,14 +54,77 @@ void write_bmp(char *outputfilename, unsigned char header[], unsigned char outpu
 	fwrite(outputimg, sizeof(unsigned char), (*width) * (*height) * 3 * sizeof(unsigned char), fo);
 	fclose(fo);
 }
-int main()
+void show_info(char *inputfilename, int* width, int* height) {
+	printf("Morphological Opening\n");
+	printf("============================\n");
+	printf("File: %s\n", inputfilename);
+	printf("Width: %d\n", *width);
+	printf("Height: %d\n", *height);
+	printf("============================\n");
+}
+unsigned char *dilation(unsigned char input_img[], int* width, int* height , int* struct_size)
+{	
+	static unsigned char *output_img;
+	output_img = (unsigned char *)malloc((*width) * (*height) * 3 * sizeof(unsigned char));
+	if (output_img == NULL)
+	{
+		printf("Error: Malloc failed. when you try to allocate bmp memory\n");
+		return NULL;
+	}
+	int struct_margin = (*struct_size - 1) / 2;
+	int index = 0;
+	int centerpoint = 0;
+	for (int i = 0; i < *height; i++)
+	{
+		for (int j = 0; j < (*width) * 3; j += 3)
+		{	
+			centerpoint = (i * (*width) * 3) + (j);
+			if ((i >= struct_margin) && (i < (*height - struct_margin)) && (centerpoint >= (i * ((*width) * 3) + struct_margin * 3)) && (centerpoint < ((i + 1) * ((*width) * 3) - 3 - struct_margin * 3))) {
+				for (int k = -struct_margin; k <= struct_margin; k++) {		
+					for (int l = -struct_margin; l <= struct_margin; l++) {							
+						index = centerpoint + k * ((*width) * 3) + l * 3;
+						if ((input_img[index] == (char)0) && (input_img[index + 1] == (char)0) && (input_img[index + 2] == (char)0)) {
+							output_img[centerpoint + 0] = (char)0;
+							output_img[centerpoint + 1] = (char)0;
+							output_img[centerpoint + 2] = (char)0;
+							goto end;
+						}
+						else {
+							output_img[centerpoint + 0] = input_img[centerpoint + 0];
+							output_img[centerpoint + 1] = input_img[centerpoint + 1];
+							output_img[centerpoint + 2] = input_img[centerpoint + 2];
+						}
+					}
+				}
+			end:;
+			}
+			else 
+			{
+				output_img[centerpoint + 0] = input_img[centerpoint + 0];
+				output_img[centerpoint + 1] = input_img[centerpoint + 1];
+				output_img[centerpoint + 2] = input_img[centerpoint + 2];
+			}
+		}
+	}
+	printf("done!\n");
+	printf("%d\n", (int)output_img[*width*3+3] );
+	return output_img;
+}
+int main(int argc, char** argv)
 {
-    int width, height, i, j;
+	int width, height, i, j,struct_size;
+	struct_size = 3;
 	char* inputfilename = "test1.bmp";
 	char* outputfilename = "test1_output.bmp";
 	unsigned char header[54];
 	unsigned char* input_img;
+	unsigned char* output_img;
+	//unsigned char* output_img;
 	input_img = read_bmp(inputfilename, header, &width, &height);
-	write_bmp(outputfilename, header, input_img, &width, &height);
-    return 0;
+	show_info(inputfilename, &width, &height);
+	output_img = dilation(input_img, &width, &height,&struct_size);
+	write_bmp(outputfilename, header, output_img, &width, &height);
+	free(input_img);
+	//free(output_img);
+	return 0;
 }
